@@ -5,12 +5,15 @@ Data that may appear as part of a TLV record should implement [`TlvEncode`] and
 in addition to [`TlvEncode`] and [`TlvDecode`]
 
 ## Example
-```
-#[derive(Debug)]
-struct GenericNameComponent {
-    typ: VarNum,
-    length: VarNum,
-    name: Bytes,
+```rust
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
+
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) struct GenericNameComponent {
+    pub(crate) typ: VarNum,
+    pub(crate) length: VarNum,
+    pub(crate) name: Bytes,
 }
 
 impl Tlv for GenericNameComponent {
@@ -33,15 +36,15 @@ impl TlvEncode for GenericNameComponent {
 }
 
 impl TlvDecode for GenericNameComponent {
-    fn decode(mut bytes: impl Buf) -> Result<Self> {
-        let typ = VarNum::decode(&mut bytes)?;
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        let typ = VarNum::decode(bytes)?;
         if typ.value() != Self::TYP {
             return Err(TlvError::TypeMismatch {
                 expected: Self::TYP,
                 found: typ.value(),
             });
         }
-        let length = VarNum::decode(&mut bytes)?;
+        let length = VarNum::decode(bytes)?;
         let mut inner_data = bytes.copy_to_bytes(length.value());
         let name = Bytes::decode(&mut inner_data)?;
 
@@ -61,7 +64,7 @@ impl Tlv for Name {
 }
 
 impl TlvDecode for Name {
-    fn decode(mut bytes: impl Buf) -> Result<Self> {
+    fn decode(mut bytes: &mut Bytes) -> Result<Self> {
         let typ = VarNum::decode(&mut bytes)?;
         if typ.value() != Self::TYP {
             return Err(TlvError::TypeMismatch {

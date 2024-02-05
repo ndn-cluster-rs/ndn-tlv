@@ -3,9 +3,9 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::{error::TlvError, Result, TlvDecode, TlvEncode};
 
 /// A variable-length number as used by TLV encoded values
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 pub struct VarNum {
-    inner: Bytes,
+    inner: Bytes, // TODO: remove
     value: usize,
 }
 
@@ -18,6 +18,12 @@ impl VarNum {
     /// The value in this `VarNum` as a `usize`
     pub fn value(&self) -> usize {
         self.value
+    }
+}
+
+impl PartialEq for VarNum {
+    fn eq(&self, other: &Self) -> bool {
+        self.value() == other.value()
     }
 }
 
@@ -119,7 +125,7 @@ impl TlvEncode for VarNum {
 }
 
 impl TlvDecode for VarNum {
-    fn decode(mut bytes: impl Buf) -> Result<Self> {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
         if bytes.remaining() <= 0 {
             return Err(TlvError::UnexpectedEndOfStream);
         }
@@ -157,7 +163,7 @@ mod tests {
         let num = VarNum::from(5u8);
         assert_eq!(num.inner.len(), 1);
         assert_eq!(&num.inner[0..=0], &[5]);
-        assert_eq!(VarNum::decode(num.inner.clone()).unwrap().value(), 5);
+        assert_eq!(VarNum::decode(&mut num.inner.clone()).unwrap().value(), 5);
     }
 
     #[test]
@@ -165,7 +171,10 @@ mod tests {
         let num = VarNum::from(0xFFu8);
         assert_eq!(num.inner.len(), 3);
         assert_eq!(&num.inner[0..=2], &[0xFD, 00, 0xFF]);
-        assert_eq!(VarNum::decode(num.inner.clone()).unwrap().value(), 0xFF);
+        assert_eq!(
+            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
+            0xFF
+        );
     }
 
     #[test]
@@ -173,7 +182,10 @@ mod tests {
         let num = VarNum::from(0xFFFFu16);
         assert_eq!(num.inner.len(), 3);
         assert_eq!(&num.inner[0..=2], &[0xFD, 0xFF, 0xFF]);
-        assert_eq!(VarNum::decode(num.inner.clone()).unwrap().value(), 0xFFFF);
+        assert_eq!(
+            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
+            0xFFFF
+        );
     }
 
     #[test]
@@ -182,7 +194,7 @@ mod tests {
         assert_eq!(num.inner.len(), 5);
         assert_eq!(&num.inner[0..=4], &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF]);
         assert_eq!(
-            VarNum::decode(num.inner.clone()).unwrap().value(),
+            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
             0xFFFF_FFFF
         );
     }
@@ -196,7 +208,7 @@ mod tests {
             &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
         );
         assert_eq!(
-            VarNum::decode(num.inner.clone()).unwrap().value(),
+            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
             0xFFFF_FFFF_FFFF_FFFF
         );
     }
