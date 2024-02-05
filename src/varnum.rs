@@ -10,10 +10,12 @@ pub struct VarNum {
 }
 
 impl VarNum {
+    /// Construct a new `VarNum` from a `usize`
     pub fn new(value: usize) -> Self {
         value.into()
     }
 
+    /// The value in this `VarNum` as a `usize`
     pub fn value(&self) -> usize {
         self.value
     }

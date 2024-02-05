@@ -3,6 +3,7 @@ pub trait Tlv {
     /// The assigned type number for this TLV record
     const TYP: usize;
 
+    /// Whether the TLV is critical, see [`tlv_critical`]
     fn critical() -> bool {
         tlv_critical::<Self>()
     }

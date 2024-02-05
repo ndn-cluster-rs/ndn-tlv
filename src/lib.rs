@@ -1,3 +1,6 @@
+#![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
+
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub use error::TlvError;
 pub use tlv::tlv_critical;
@@ -17,7 +20,7 @@ pub type Result<T> = std::result::Result<T, TlvError>;
 pub trait TlvEncode {
     /// Encode the value as a TLV record or part of one
     fn encode(&self) -> Bytes;
-    // The size of the encoded data in bytes
+    /// The size of the encoded data in bytes
     fn size(&self) -> usize;
 }
 
