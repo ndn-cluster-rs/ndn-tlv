@@ -10,10 +10,10 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
 
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct GenericNameComponent {
-    pub(crate) typ: VarNum,
-    pub(crate) length: VarNum,
-    pub(crate) name: Bytes,
+struct GenericNameComponent {
+    typ: VarNum,
+    length: VarNum,
+    name: Bytes,
 }
 
 impl Tlv for GenericNameComponent {
