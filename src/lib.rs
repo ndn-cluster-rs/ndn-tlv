@@ -91,10 +91,48 @@ impl<T: TlvDecode> TlvDecode for Vec<T> {
                     // Different TLV than what we expected - Vec ended
                     return Ok(ret);
                 }
+                // End of stream should not be possible unless the data is malformed
                 Err(e) => return Err(e),
             }
         }
         Ok(ret)
+    }
+}
+
+impl<T: TlvEncode> TlvEncode for Option<T> {
+    fn encode(&self) -> Bytes {
+        match self {
+            None => Bytes::new(),
+            Some(value) => value.encode(),
+        }
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            None => 0,
+            Some(value) => value.size(),
+        }
+    }
+}
+
+impl<T: TlvDecode> TlvDecode for Option<T> {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        let remaining = bytes.remaining();
+        let mut bytes_clone = bytes.clone();
+        let t = T::decode(&mut bytes_clone);
+        match t {
+            Ok(value) => {
+                bytes.advance(remaining - bytes_clone.remaining());
+                Ok(Some(value))
+            }
+            // Different Type - probably what is next to parse
+            Err(TlvError::TypeMismatch {
+                expected: _,
+                found: _,
+            }) => Ok(None),
+            // End of stream - no data here
+            Err(TlvError::UnexpectedEndOfStream) => Ok(None),
+        }
     }
 }
 
@@ -247,6 +285,60 @@ mod tests {
         }
     }
 
+    struct HasOption {
+        component: Option<GenericNameComponent>,
+        can_be_prefix: CanBePrefix,
+    }
+
+    impl Tlv for HasOption {
+        const TYP: usize = 143;
+
+        fn inner_size(&self) -> usize {
+            self.component.size() + self.can_be_prefix.size()
+        }
+    }
+
+    impl TlvEncode for HasOption {
+        fn encode(&self) -> Bytes {
+            let mut bytes = BytesMut::with_capacity(self.size());
+
+            bytes.put(VarNum::from(Self::TYP).encode());
+            bytes.put(VarNum::from(self.inner_size()).encode());
+            bytes.put(self.component.encode());
+            bytes.put(self.can_be_prefix.encode());
+
+            bytes.freeze()
+        }
+
+        fn size(&self) -> usize {
+            VarNum::from(Self::TYP).size()
+                + VarNum::from(self.inner_size()).size()
+                + self.component.size()
+                + self.can_be_prefix.size()
+        }
+    }
+
+    impl TlvDecode for HasOption {
+        fn decode(bytes: &mut Bytes) -> Result<Self> {
+            let typ = VarNum::decode(bytes)?;
+            if typ.value() != Self::TYP {
+                return Err(TlvError::TypeMismatch {
+                    expected: Self::TYP,
+                    found: typ.value(),
+                });
+            }
+            let length = VarNum::decode(bytes)?;
+            let mut inner_data = bytes.copy_to_bytes(length.value());
+            let component = Option::<GenericNameComponent>::decode(&mut inner_data)?;
+            let can_be_prefix = CanBePrefix::decode(&mut inner_data)?;
+
+            Ok(Self {
+                component,
+                can_be_prefix,
+            })
+        }
+    }
+
     #[test]
     fn vec_partial() {
         let mut data = Bytes::from(
@@ -262,5 +354,28 @@ mod tests {
         assert_eq!(partial.components[0].name, &b"hello"[..]);
         assert_eq!(partial.components[1].name, &b"world"[..]);
         assert_eq!(partial.can_be_prefix, CanBePrefix);
+    }
+
+    #[test]
+    fn option_some() {
+        let mut data = Bytes::from(
+            &[
+                143, 9, 8, 5, b'h', b'e', b'l', b'l', b'o', 33, 0, 255, 255, 255,
+            ][..],
+        );
+
+        let option = HasOption::decode(&mut data).unwrap();
+        assert_eq!(data.remaining(), 3);
+        assert!(option.component.is_some());
+        assert_eq!(option.component.unwrap().name, &b"hello"[..]);
+    }
+
+    #[test]
+    fn option_none() {
+        let mut data = Bytes::from(&[143, 2, 33, 0, 255, 255, 255][..]);
+
+        let option = HasOption::decode(&mut data).unwrap();
+        assert_eq!(data.remaining(), 3);
+        assert!(option.component.is_none());
     }
 }
