@@ -239,6 +239,13 @@ mod tests {
     #[tlv(8, internal = true)]
     struct TupleStruct(Bytes);
 
+    #[derive(Debug, Tlv)]
+    #[tlv(0, internal = true)]
+    enum EnumTest {
+        GenericNameComponent(GenericNameComponent),
+        CanBePrefix(CanBePrefix),
+    }
+
     #[test]
     fn generic_name_component() {
         let mut data = Bytes::from(&[8, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
@@ -336,6 +343,24 @@ mod tests {
         assert_eq!(component.0, &b"hello"[..]);
 
         let new_data = component.encode();
+        assert_eq!(new_data, initial_data[0..7]);
+    }
+
+    #[test]
+    fn enum_test() {
+        let mut data = Bytes::from(&[8, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
+        let initial_data = data.clone();
+        let etest = EnumTest::decode(&mut data).unwrap();
+
+        assert_eq!(data.remaining(), 3);
+        match etest {
+            EnumTest::GenericNameComponent(ref component) => {
+                assert_eq!(component.name, &b"hello"[..]);
+            }
+            _ => panic!("Wrong variant"),
+        }
+
+        let new_data = etest.encode();
         assert_eq!(new_data, initial_data[0..7]);
     }
 }
