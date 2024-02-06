@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+pub use ::bytes;
+pub use ::ndn_tlv_derive::Tlv;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub use error::TlvError;
 pub use tlv::tlv_critical;
