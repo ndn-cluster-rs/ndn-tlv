@@ -5,7 +5,6 @@ use crate::{error::TlvError, Result, TlvDecode, TlvEncode};
 /// A variable-length number as used by TLV encoded values
 #[derive(Debug, Clone, Eq)]
 pub struct VarNum {
-    inner: Bytes, // TODO: remove
     value: usize,
 }
 
@@ -29,34 +28,7 @@ impl PartialEq for VarNum {
 
 impl From<usize> for VarNum {
     fn from(value: usize) -> Self {
-        let bufsize = match value {
-            0x00..=0xFC => 1,
-            0xFD..=0xFFFF => 3,
-            0x10000..=0xFFFF_FFFF => 5,
-            _ => 9,
-        };
-        let mut bytes = BytesMut::with_capacity(bufsize);
-
-        match value {
-            0x00..=0xFC => bytes.put_u8(value as u8),
-            0xFD..=0xFFFF => {
-                bytes.put_u8(0xFD);
-                bytes.put_u16(value as u16);
-            }
-            0x10000..=0xFFFF_FFFF => {
-                bytes.put_u8(0xFE);
-                bytes.put_u32(value as u32);
-            }
-            _ => {
-                bytes.put_u8(0xFF);
-                bytes.put_u64(value as u64);
-            }
-        }
-
-        Self {
-            value,
-            inner: bytes.freeze(),
-        }
+        Self { value }
     }
 }
 
@@ -116,11 +88,34 @@ impl From<i8> for VarNum {
 
 impl TlvEncode for VarNum {
     fn encode(&self) -> Bytes {
-        self.inner.clone()
+        let mut bytes = BytesMut::with_capacity(self.size());
+
+        match self.value() {
+            0x00..=0xFC => bytes.put_u8(self.value() as u8),
+            0xFD..=0xFFFF => {
+                bytes.put_u8(0xFD);
+                bytes.put_u16(self.value() as u16);
+            }
+            0x10000..=0xFFFF_FFFF => {
+                bytes.put_u8(0xFE);
+                bytes.put_u32(self.value() as u32);
+            }
+            _ => {
+                bytes.put_u8(0xFF);
+                bytes.put_u64(self.value() as u64);
+            }
+        }
+
+        bytes.freeze()
     }
 
     fn size(&self) -> usize {
-        self.inner.len()
+        match self.value() {
+            0x00..=0xFC => 1,
+            0xFD..=0xFFFF => 3,
+            0x10000..=0xFFFF_FFFF => 5,
+            _ => 9,
+        }
     }
 }
 
@@ -161,29 +156,29 @@ mod tests {
     #[test]
     fn simple_number() {
         let num = VarNum::from(5u8);
-        assert_eq!(num.inner.len(), 1);
-        assert_eq!(&num.inner[0..=0], &[5]);
-        assert_eq!(VarNum::decode(&mut num.inner.clone()).unwrap().value(), 5);
+        let encoded = num.encode();
+        assert_eq!(num.size(), 1);
+        assert_eq!(&encoded[0..=0], &[5]);
+        assert_eq!(VarNum::decode(&mut encoded.clone()).unwrap().value(), 5);
     }
 
     #[test]
     fn low_number3() {
         let num = VarNum::from(0xFFu8);
-        assert_eq!(num.inner.len(), 3);
-        assert_eq!(&num.inner[0..=2], &[0xFD, 00, 0xFF]);
-        assert_eq!(
-            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
-            0xFF
-        );
+        let encoded = num.encode();
+        assert_eq!(num.size(), 3);
+        assert_eq!(&encoded[0..=2], &[0xFD, 00, 0xFF]);
+        assert_eq!(VarNum::decode(&mut encoded.clone()).unwrap().value(), 0xFF);
     }
 
     #[test]
     fn number3() {
         let num = VarNum::from(0xFFFFu16);
-        assert_eq!(num.inner.len(), 3);
-        assert_eq!(&num.inner[0..=2], &[0xFD, 0xFF, 0xFF]);
+        let encoded = num.encode();
+        assert_eq!(num.size(), 3);
+        assert_eq!(&encoded[0..=2], &[0xFD, 0xFF, 0xFF]);
         assert_eq!(
-            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
+            VarNum::decode(&mut encoded.clone()).unwrap().value(),
             0xFFFF
         );
     }
@@ -191,10 +186,11 @@ mod tests {
     #[test]
     fn number5() {
         let num = VarNum::from(0xFFFF_FFFFu32);
-        assert_eq!(num.inner.len(), 5);
-        assert_eq!(&num.inner[0..=4], &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF]);
+        let encoded = num.encode();
+        assert_eq!(num.size(), 5);
+        assert_eq!(&encoded[0..=4], &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF]);
         assert_eq!(
-            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
+            VarNum::decode(&mut encoded.clone()).unwrap().value(),
             0xFFFF_FFFF
         );
     }
@@ -202,13 +198,14 @@ mod tests {
     #[test]
     fn number9() {
         let num = VarNum::from(0xFFFF_FFFF_FFFF_FFFFu64);
-        assert_eq!(num.inner.len(), 9);
+        let encoded = num.encode();
+        assert_eq!(num.size(), 9);
         assert_eq!(
-            &num.inner[0..=8],
+            &encoded[0..=8],
             &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
         );
         assert_eq!(
-            VarNum::decode(&mut num.inner.clone()).unwrap().value(),
+            VarNum::decode(&mut encoded.clone()).unwrap().value(),
             0xFFFF_FFFF_FFFF_FFFF
         );
     }
