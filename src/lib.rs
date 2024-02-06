@@ -170,51 +170,16 @@ impl<T: TlvDecode> TlvDecode for Option<T> {
 mod tests {
     use super::*;
 
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Tlv)]
+    #[tlv(8, internal = true)]
     pub(crate) struct GenericNameComponent {
         pub(crate) name: Bytes,
     }
 
-    impl Tlv for GenericNameComponent {
-        const TYP: usize = 8;
-
-        fn inner_size(&self) -> usize {
-            self.name.size()
-        }
-    }
-
-    impl TlvEncode for GenericNameComponent {
-        fn encode(&self) -> Bytes {
-            let mut bytes = BytesMut::with_capacity(self.size());
-            bytes.put(VarNum::from(Self::TYP).encode());
-            bytes.put(VarNum::from(self.inner_size()).encode());
-            bytes.put(self.name.encode());
-
-            bytes.freeze()
-        }
-
-        fn size(&self) -> usize {
-            VarNum::from(Self::TYP).size()
-                + VarNum::from(self.inner_size()).size()
-                + self.name.size()
-        }
-    }
-
-    impl TlvDecode for GenericNameComponent {
-        fn decode(bytes: &mut Bytes) -> Result<Self> {
-            let typ = VarNum::decode(bytes)?;
-            if typ.value() != Self::TYP {
-                return Err(TlvError::TypeMismatch {
-                    expected: Self::TYP,
-                    found: typ.value(),
-                });
-            }
-            let length = VarNum::decode(bytes)?;
-            let mut inner_data = bytes.copy_to_bytes(length.value());
-            let name = Bytes::decode(&mut inner_data)?;
-
-            Ok(Self { name })
-        }
+    #[derive(Debug, Tlv)]
+    #[tlv(7, internal = true)]
+    struct Name {
+        components: Vec<GenericNameComponent>,
     }
 
     #[derive(Debug, PartialEq, Eq, Tlv)]
@@ -362,5 +327,15 @@ mod tests {
 
         let new_data = etest.encode();
         assert_eq!(new_data, initial_data[0..7]);
+    }
+
+    #[test]
+    fn overlength() {
+        // Inner TLV escapes the outer TLV
+        let mut data = Bytes::from(&[7, 7, 8, 6, b'h', b'e', b'l', b'l', b'o', 255, 255][..]);
+
+        let name = Name::decode(&mut data);
+        assert!(name.is_err());
+        assert_eq!(name.unwrap_err(), TlvError::UnexpectedEndOfStream);
     }
 }
