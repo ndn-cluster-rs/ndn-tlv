@@ -13,16 +13,12 @@ use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
 #[derive(Debug, Eq, PartialEq, Tlv)]
 #[tlv(8)]
 struct GenericNameComponent {
-    typ: VarNum,
-    length: VarNum,
     name: Bytes,
 }
 
 #[derive(Debug, Tlv)]
 #[tlv(7)]
 struct Name {
-    typ: VarNum,
-    length: VarNum,
     components: Vec<GenericNameComponent>,
 }
 ```
