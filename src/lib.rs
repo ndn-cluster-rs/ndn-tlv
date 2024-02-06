@@ -187,156 +187,22 @@ mod tests {
         }
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Tlv)]
+    #[tlv(33, internal = true)]
     struct CanBePrefix;
 
-    impl Tlv for CanBePrefix {
-        const TYP: usize = 33;
-
-        fn inner_size(&self) -> usize {
-            0
-        }
-    }
-
-    impl TlvEncode for CanBePrefix {
-        fn encode(&self) -> Bytes {
-            let mut bytes = BytesMut::with_capacity(self.size());
-
-            bytes.put(VarNum::from(Self::TYP).encode());
-            bytes.put(VarNum::from(self.inner_size()).encode());
-
-            bytes.freeze()
-        }
-
-        fn size(&self) -> usize {
-            VarNum::from(Self::TYP).size() + VarNum::from(self.inner_size()).size()
-        }
-    }
-
-    impl TlvDecode for CanBePrefix {
-        fn decode(bytes: &mut Bytes) -> Result<Self> {
-            let typ = VarNum::decode(bytes)?;
-            if typ.value() != Self::TYP {
-                return Err(TlvError::TypeMismatch {
-                    expected: Self::TYP,
-                    found: typ.value(),
-                });
-            }
-            let length = VarNum::decode(bytes)?;
-            // No error variant for this case, as it only appears in test code
-            assert_eq!(length.value(), 0);
-
-            Ok(Self)
-        }
-    }
-
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, Tlv)]
+    #[tlv(129, internal = true)]
     struct VecPartial {
         components: Vec<GenericNameComponent>,
         can_be_prefix: CanBePrefix,
     }
 
-    impl Tlv for VecPartial {
-        const TYP: usize = 129;
-
-        fn inner_size(&self) -> usize {
-            self.components.size() + self.can_be_prefix.size()
-        }
-    }
-
-    impl TlvEncode for VecPartial {
-        fn encode(&self) -> Bytes {
-            let mut bytes = BytesMut::with_capacity(self.size());
-
-            bytes.put(VarNum::from(Self::TYP).encode());
-            bytes.put(VarNum::from(self.inner_size()).encode());
-            bytes.put(self.components.encode());
-            bytes.put(self.can_be_prefix.encode());
-
-            bytes.freeze()
-        }
-
-        fn size(&self) -> usize {
-            VarNum::from(Self::TYP).size()
-                + VarNum::from(self.inner_size()).size()
-                + self.components.size()
-                + self.can_be_prefix.size()
-        }
-    }
-
-    impl TlvDecode for VecPartial {
-        fn decode(bytes: &mut Bytes) -> Result<Self> {
-            let typ = VarNum::decode(bytes)?;
-            if typ.value() != Self::TYP {
-                return Err(TlvError::TypeMismatch {
-                    expected: Self::TYP,
-                    found: typ.value(),
-                });
-            }
-            let length = VarNum::decode(bytes)?;
-            let mut inner_data = bytes.copy_to_bytes(length.value());
-            let components = Vec::<GenericNameComponent>::decode(&mut inner_data)?;
-            let can_be_prefix = CanBePrefix::decode(&mut inner_data)?;
-
-            Ok(Self {
-                components,
-                can_be_prefix,
-            })
-        }
-    }
-
+    #[derive(Tlv)]
+    #[tlv(143, internal = true)]
     struct HasOption {
         component: Option<GenericNameComponent>,
         can_be_prefix: CanBePrefix,
-    }
-
-    impl Tlv for HasOption {
-        const TYP: usize = 143;
-
-        fn inner_size(&self) -> usize {
-            self.component.size() + self.can_be_prefix.size()
-        }
-    }
-
-    impl TlvEncode for HasOption {
-        fn encode(&self) -> Bytes {
-            let mut bytes = BytesMut::with_capacity(self.size());
-
-            bytes.put(VarNum::from(Self::TYP).encode());
-            bytes.put(VarNum::from(self.inner_size()).encode());
-            bytes.put(self.component.encode());
-            bytes.put(self.can_be_prefix.encode());
-
-            bytes.freeze()
-        }
-
-        fn size(&self) -> usize {
-            VarNum::from(Self::TYP).size()
-                + VarNum::from(self.inner_size()).size()
-                + self.component.size()
-                + self.can_be_prefix.size()
-        }
-    }
-
-    impl TlvDecode for HasOption {
-        fn decode(bytes: &mut Bytes) -> Result<Self> {
-            let typ = VarNum::decode(bytes)?;
-            if typ.value() != Self::TYP {
-                return Err(TlvError::TypeMismatch {
-                    expected: Self::TYP,
-                    found: typ.value(),
-                });
-            }
-            let length = VarNum::decode(bytes)?;
-            let mut inner_data = bytes.copy_to_bytes(length.value());
-            let component = Option::<GenericNameComponent>::decode(&mut inner_data)?;
-            let can_be_prefix = CanBePrefix::decode(&mut inner_data)?;
-
-            Ok(Self {
-                component,
-                can_be_prefix,
-            })
-        }
     }
 
     #[test]
