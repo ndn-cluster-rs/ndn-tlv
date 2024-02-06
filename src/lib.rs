@@ -5,8 +5,8 @@ pub use ::bytes;
 pub use ::ndn_tlv_derive::Tlv;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub use error::TlvError;
-pub use tlv::tlv_critical;
 pub use tlv::Tlv;
+pub use tlv::{tlv_critical, tlv_typ_critical};
 pub use varnum::VarNum;
 
 mod error;
@@ -37,6 +37,36 @@ pub trait TlvDecode: Sized {
     /// data is known at the call site, restrict the size of `bytes` to prevent the entire buffer
     /// being consumed.
     fn decode(bytes: &mut Bytes) -> Result<Self>;
+}
+
+/// Advance `bytes` until a valid TLV record of type `T` is found
+///
+/// Any unexpected critical TLV records of a different type will lead to an error.
+/// Unexpected non-critical TLV records will be ignored.
+pub fn find_tlv<T: Tlv>(bytes: &mut Bytes) -> Result<()> {
+    let mut cur = bytes.clone();
+
+    while cur.has_remaining() {
+        let found_typ = VarNum::decode(&mut cur)?;
+        if found_typ.value() == T::TYP {
+            return Ok(());
+        }
+
+        // Wrong type
+        if tlv_typ_critical(found_typ.value()) {
+            return Err(TlvError::TypeMismatch {
+                expected: T::TYP,
+                found: found_typ.value(),
+            });
+        }
+
+        // non-critical
+        let length = VarNum::decode(&mut cur)?;
+        cur.advance(length.value());
+        bytes.advance(bytes.remaining() - cur.remaining());
+    }
+
+    Err(TlvError::UnexpectedEndOfStream)
 }
 
 impl TlvEncode for Bytes {
@@ -191,7 +221,7 @@ mod tests {
     #[tlv(33, internal = true)]
     struct CanBePrefix;
 
-    #[derive(PartialEq, Eq, Tlv)]
+    #[derive(Debug, PartialEq, Eq, Tlv)]
     #[tlv(129, internal = true)]
     struct VecPartial {
         components: Vec<GenericNameComponent>,
@@ -243,5 +273,43 @@ mod tests {
         let option = HasOption::decode(&mut data).unwrap();
         assert_eq!(data.remaining(), 3);
         assert!(option.component.is_none());
+    }
+
+    #[test]
+    fn unknown_critical() {
+        let mut data = Bytes::from(
+            &[
+                129, 18, 8, 5, b'h', b'e', b'l', b'l', b'o', 8, 5, b'w', b'o', b'r', b'l', b'd',
+                127, 0, 33, 0, 255, 255, 255,
+            ][..],
+        );
+
+        let partial = VecPartial::decode(&mut data);
+        assert_eq!(data.remaining(), 3);
+        assert!(partial.is_err());
+        assert_eq!(
+            partial.unwrap_err(),
+            TlvError::TypeMismatch {
+                expected: 33,
+                found: 127
+            }
+        );
+    }
+
+    #[test]
+    fn unknown_non_critical() {
+        let mut data = Bytes::from(
+            &[
+                129, 18, 8, 5, b'h', b'e', b'l', b'l', b'o', 8, 5, b'w', b'o', b'r', b'l', b'd',
+                126, 0, 33, 0, 255, 255, 255,
+            ][..],
+        );
+
+        let partial = VecPartial::decode(&mut data).unwrap();
+        assert_eq!(data.remaining(), 3);
+        assert_eq!(partial.components.len(), 2);
+        assert_eq!(partial.components[0].name, &b"hello"[..]);
+        assert_eq!(partial.components[1].name, &b"world"[..]);
+        assert_eq!(partial.can_be_prefix, CanBePrefix);
     }
 }

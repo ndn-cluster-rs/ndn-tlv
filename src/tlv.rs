@@ -20,7 +20,15 @@ pub trait Tlv {
 /// An unknown or out-of-order non-critical TLV can be safely ignored, while a critical TLV must
 /// lead to an error
 pub const fn tlv_critical<T: Tlv + ?Sized>() -> bool {
-    T::TYP < 32 || T::TYP & 1 == 1
+    tlv_typ_critical(T::TYP)
+}
+
+/// Returns whether a TLV with a given type `typ` is "critical"
+///
+/// An unknown or out-of-order non-critical TLV can be safely ignored, while a critical TLV must
+/// lead to an error
+pub const fn tlv_typ_critical(typ: usize) -> bool {
+    typ < 32 || typ & 1 == 1
 }
 
 #[cfg(test)]
