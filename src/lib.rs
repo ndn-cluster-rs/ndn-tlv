@@ -104,27 +104,31 @@ mod tests {
 
     #[derive(Debug, Eq, PartialEq)]
     pub(crate) struct GenericNameComponent {
-        pub(crate) typ: VarNum,
-        pub(crate) length: VarNum,
         pub(crate) name: Bytes,
     }
 
     impl Tlv for GenericNameComponent {
         const TYP: usize = 8;
+
+        fn inner_size(&self) -> usize {
+            self.name.size()
+        }
     }
 
     impl TlvEncode for GenericNameComponent {
         fn encode(&self) -> Bytes {
             let mut bytes = BytesMut::with_capacity(self.size());
-            bytes.put(self.typ.encode());
-            bytes.put(self.length.encode());
+            bytes.put(VarNum::from(Self::TYP).encode());
+            bytes.put(VarNum::from(self.inner_size()).encode());
             bytes.put(self.name.encode());
 
             bytes.freeze()
         }
 
         fn size(&self) -> usize {
-            self.typ.size() + self.length.size() + self.name.size()
+            VarNum::from(Self::TYP).size()
+                + VarNum::from(self.inner_size()).size()
+                + self.name.size()
         }
     }
 
@@ -141,32 +145,33 @@ mod tests {
             let mut inner_data = bytes.copy_to_bytes(length.value());
             let name = Bytes::decode(&mut inner_data)?;
 
-            Ok(Self { typ, length, name })
+            Ok(Self { name })
         }
     }
 
     #[derive(Debug, PartialEq, Eq)]
-    struct CanBePrefix {
-        typ: VarNum,
-        length: VarNum,
-    }
+    struct CanBePrefix;
 
     impl Tlv for CanBePrefix {
         const TYP: usize = 33;
+
+        fn inner_size(&self) -> usize {
+            0
+        }
     }
 
     impl TlvEncode for CanBePrefix {
         fn encode(&self) -> Bytes {
             let mut bytes = BytesMut::with_capacity(self.size());
 
-            bytes.put(self.typ.encode());
-            bytes.put(self.length.encode());
+            bytes.put(VarNum::from(Self::TYP).encode());
+            bytes.put(VarNum::from(self.inner_size()).encode());
 
             bytes.freeze()
         }
 
         fn size(&self) -> usize {
-            self.typ.size() + self.length.size()
+            VarNum::from(Self::TYP).size() + VarNum::from(self.inner_size()).size()
         }
     }
 
@@ -183,28 +188,30 @@ mod tests {
             // No error variant for this case, as it only appears in test code
             assert_eq!(length.value(), 0);
 
-            Ok(Self { typ, length })
+            Ok(Self)
         }
     }
 
     #[derive(PartialEq, Eq)]
     struct VecPartial {
-        typ: VarNum,
-        length: VarNum,
         components: Vec<GenericNameComponent>,
         can_be_prefix: CanBePrefix,
     }
 
     impl Tlv for VecPartial {
         const TYP: usize = 129;
+
+        fn inner_size(&self) -> usize {
+            self.components.size() + self.can_be_prefix.size()
+        }
     }
 
     impl TlvEncode for VecPartial {
         fn encode(&self) -> Bytes {
             let mut bytes = BytesMut::with_capacity(self.size());
 
-            bytes.put(self.typ.encode());
-            bytes.put(self.length.encode());
+            bytes.put(VarNum::from(Self::TYP).encode());
+            bytes.put(VarNum::from(self.inner_size()).encode());
             bytes.put(self.components.encode());
             bytes.put(self.can_be_prefix.encode());
 
@@ -212,8 +219,8 @@ mod tests {
         }
 
         fn size(&self) -> usize {
-            self.typ.size()
-                + self.length.size()
+            VarNum::from(Self::TYP).size()
+                + VarNum::from(self.inner_size()).size()
                 + self.components.size()
                 + self.can_be_prefix.size()
         }
@@ -234,8 +241,6 @@ mod tests {
             let can_be_prefix = CanBePrefix::decode(&mut inner_data)?;
 
             Ok(Self {
-                typ,
-                length,
                 components,
                 can_be_prefix,
             })
@@ -256,12 +261,6 @@ mod tests {
         assert_eq!(partial.components.len(), 2);
         assert_eq!(partial.components[0].name, &b"hello"[..]);
         assert_eq!(partial.components[1].name, &b"world"[..]);
-        assert_eq!(
-            partial.can_be_prefix,
-            CanBePrefix {
-                typ: VarNum::from(33usize),
-                length: VarNum::from(0usize)
-            }
-        );
+        assert_eq!(partial.can_be_prefix, CanBePrefix);
     }
 }

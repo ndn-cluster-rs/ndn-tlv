@@ -3,6 +3,12 @@ pub trait Tlv {
     /// The assigned type number for this TLV record
     const TYP: usize;
 
+    /// The size of the payload contained within this TLV
+    ///
+    /// Does not include the bytes used for type and length and should be equal to the length value
+    /// in the packet.
+    fn inner_size(&self) -> usize;
+
     /// Whether the TLV is critical, see [`tlv_critical`]
     fn critical() -> bool {
         tlv_critical::<Self>()
@@ -28,13 +34,15 @@ mod tests {
 
     #[derive(Debug)]
     struct Name {
-        typ: VarNum,
-        length: VarNum,
         components: Vec<GenericNameComponent>,
     }
 
     impl Tlv for Name {
         const TYP: usize = 7;
+
+        fn inner_size(&self) -> usize {
+            self.components.size()
+        }
     }
 
     impl TlvDecode for Name {
@@ -50,26 +58,24 @@ mod tests {
             let mut inner_data = bytes.copy_to_bytes(length.value());
             let components = Vec::<GenericNameComponent>::decode(&mut inner_data)?;
 
-            Ok(Self {
-                typ,
-                length,
-                components,
-            })
+            Ok(Self { components })
         }
     }
 
     impl TlvEncode for Name {
         fn encode(&self) -> Bytes {
             let mut bytes = BytesMut::with_capacity(self.size());
-            bytes.put(self.typ.encode());
-            bytes.put(self.length.encode());
+            bytes.put(VarNum::from(Self::TYP).encode());
+            bytes.put(VarNum::from(self.inner_size()).encode());
             bytes.put(self.components.encode());
 
             bytes.freeze()
         }
 
         fn size(&self) -> usize {
-            self.typ.size() + self.length.size() + self.components.size()
+            VarNum::from(Self::TYP).size()
+                + VarNum::from(self.inner_size()).size()
+                + self.components.size()
         }
     }
 
