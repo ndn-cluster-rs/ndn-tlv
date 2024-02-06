@@ -235,6 +235,19 @@ mod tests {
         can_be_prefix: CanBePrefix,
     }
 
+    #[derive(Tlv)]
+    #[tlv(8, internal = true)]
+    struct TupleStruct(Bytes);
+
+    #[test]
+    fn generic_name_component() {
+        let mut data = Bytes::from(&[8, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
+        let component = GenericNameComponent::decode(&mut data).unwrap();
+
+        assert_eq!(data.remaining(), 3);
+        assert_eq!(component.name, &b"hello"[..]);
+    }
+
     #[test]
     fn vec_partial() {
         let mut data = Bytes::from(
@@ -311,5 +324,18 @@ mod tests {
         assert_eq!(partial.components[0].name, &b"hello"[..]);
         assert_eq!(partial.components[1].name, &b"world"[..]);
         assert_eq!(partial.can_be_prefix, CanBePrefix);
+    }
+
+    #[test]
+    fn tuple_struct() {
+        let mut data = Bytes::from(&[8, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
+        let initial_data = data.clone();
+        let component = TupleStruct::decode(&mut data).unwrap();
+
+        assert_eq!(data.remaining(), 3);
+        assert_eq!(component.0, &b"hello"[..]);
+
+        let new_data = component.encode();
+        assert_eq!(new_data, initial_data[0..7]);
     }
 }

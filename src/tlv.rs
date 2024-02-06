@@ -88,15 +88,6 @@ mod tests {
     }
 
     #[test]
-    fn generic_name_component() {
-        let mut data = Bytes::from(&[8, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
-        let component = GenericNameComponent::decode(&mut data).unwrap();
-
-        assert_eq!(data.remaining(), 3);
-        assert_eq!(component.name, &b"hello"[..]);
-    }
-
-    #[test]
     fn wrong_type() {
         let mut data = Bytes::from(&[9, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
         let component = GenericNameComponent::decode(&mut data);
