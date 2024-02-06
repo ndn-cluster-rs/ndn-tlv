@@ -5,6 +5,29 @@ Data that may appear as part of a TLV record should implement [`TlvEncode`] and
 in addition to [`TlvEncode`] and [`TlvDecode`]
 
 ## Example
+Here is a quick example of how the library may be used:
+```rust
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
+
+#[derive(Debug, Eq, PartialEq, Tlv)]
+#[tlv(8)]
+struct GenericNameComponent {
+    typ: VarNum,
+    length: VarNum,
+    name: Bytes,
+}
+
+#[derive(Debug, Tlv)]
+#[tlv(7)]
+struct Name {
+    typ: VarNum,
+    length: VarNum,
+    components: Vec<GenericNameComponent>,
+}
+```
+
+Or, if you prefer not to use the derive functionality:
 ```rust
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
