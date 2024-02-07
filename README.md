@@ -4,122 +4,75 @@ Data that may appear as part of a TLV record should implement [`TlvEncode`] and
 [`TlvDecode`]. Types that represent a whole TLV record should implement [`Tlv`]
 in addition to [`TlvEncode`] and [`TlvDecode`]
 
+At the core of the library are the three traits [`Tlv`], `[TlvEncode`], and
+[`TlvDecode`].
+
+[`Tlv`] should be implemented on types that represent a TLV
+record. In other words, types that, in their encoded form, start with a type
+and a length.
+
+[`TlvEncode`] and [`TlvDecode`] are used for types that can be encoded/decoded
+and may appear in TLV records. All types implementing [`Tlv`] should also
+implement [`TlvEncode`] and [`TlvDecode`].
+
+To ease implementing these traits, a derive macro `Tlv` is made available.
+Simply derive it on an enum to automatically implement [`TlvEncode`] and
+[`TlvDecode`]. On structs, an attribute must be present to set the type ID of
+the TLV that this struct represents. [`Tlv`] will also be implemented on
+structs. Deriving [`TlvEncode`] and [`TlvDecode`] on structs without [`Tlv`] is
+not currently supported.
+
 ## Example
+
 Here is a quick example of how the library may be used:
+
 ```rust
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
 
-#[derive(Debug, Eq, PartialEq, Tlv)]
+#[derive(Debug, Tlv, PartialEq)]
 #[tlv(8)]
 struct GenericNameComponent {
     name: Bytes,
 }
 
-#[derive(Debug, Tlv)]
-#[tlv(7)]
-struct Name {
-    components: Vec<GenericNameComponent>,
-}
-```
-
-Or, if you prefer not to use the derive functionality:
-```rust
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use ndn_tlv::{Tlv, TlvEncode, TlvDecode, Result, VarNum, TlvError};
-
-#[derive(Debug, Eq, PartialEq)]
-struct GenericNameComponent {
+#[derive(Debug, Tlv, PartialEq)]
+#[tlv(1)]
+struct ImplicitSha256DigestComponent {
     name: Bytes,
 }
 
-impl Tlv for GenericNameComponent {
-    const TYP: usize = 8;
-
-    fn inner_size(&self) -> usize {
-        self.name.size()
-    }
+#[derive(Debug, Tlv, PartialEq)]
+enum NameComponent {
+    GenericNameComponent(GenericNameComponent),
+    ImplicitSha256DigestComponent(ImplicitSha256DigestComponent),
 }
 
-impl TlvEncode for GenericNameComponent {
-    fn encode(&self) -> Bytes {
-        let mut bytes = BytesMut::with_capacity(self.size());
-        bytes.put(VarNum::from(Self::TYP).encode());
-        bytes.put(VarNum::from(self.inner_size()).encode());
-        bytes.put(self.name.encode());
-
-        bytes.freeze()
-    }
-
-    fn size(&self) -> usize {
-        VarNum::from(Self::TYP).size()
-            + VarNum::from(self.inner_size()).size()
-            + self.name.size()
-    }
-}
-
-impl TlvDecode for GenericNameComponent {
-    fn decode(bytes: &mut Bytes) -> Result<Self> {
-        let typ = VarNum::decode(bytes)?;
-        if typ.value() != Self::TYP {
-            return Err(TlvError::TypeMismatch {
-                expected: Self::TYP,
-                found: typ.value(),
-            });
-        }
-        let length = VarNum::decode(bytes)?;
-        let mut inner_data = bytes.copy_to_bytes(length.value());
-        let name = Bytes::decode(&mut inner_data)?;
-
-        Ok(Self { name })
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Tlv, PartialEq)]
+#[tlv(7)]
 struct Name {
-    components: Vec<GenericNameComponent>,
+    components: Vec<NameComponent>,
 }
 
-impl Tlv for Name {
-    const TYP: usize = 7;
+fn main() {
+    let name = Name {
+        components: vec![
+            NameComponent::GenericNameComponent(GenericNameComponent {
+                name: Bytes::from(&b"hello"[..])
+            }),
+            NameComponent::GenericNameComponent(GenericNameComponent {
+                name: Bytes::from(&b"world"[..])
+            }),
+        ]
+    };
 
-    fn inner_size(&self) -> usize {
-        self.components.size()
-    }
-}
-
-impl TlvDecode for Name {
-    fn decode(mut bytes: &mut Bytes) -> Result<Self> {
-        let typ = VarNum::decode(&mut bytes)?;
-        if typ.value() != Self::TYP {
-            return Err(TlvError::TypeMismatch {
-                expected: Self::TYP,
-                found: typ.value(),
-            });
-        }
-        let length = VarNum::decode(&mut bytes)?;
-        let mut inner_data = bytes.copy_to_bytes(length.value());
-        let components = Vec::<GenericNameComponent>::decode(&mut inner_data)?;
-
-        Ok(Self { components })
-    }
-}
-
-impl TlvEncode for Name {
-    fn encode(&self) -> Bytes {
-        let mut bytes = BytesMut::with_capacity(self.size());
-        bytes.put(VarNum::from(Self::TYP).encode());
-        bytes.put(VarNum::from(self.inner_size()).encode());
-        bytes.put(self.components.encode());
-
-        bytes.freeze()
-    }
-
-    fn size(&self) -> usize {
-        VarNum::from(Self::TYP).size()
-            + VarNum::from(self.inner_size()).size()
-            + self.components.size()
-    }
+    let data = name.encode();
+    assert_eq!(data, &[
+            7, 14, 8, 5, b'h', b'e', b'l', b'l', b'o',
+                   8, 5, b'w', b'o', b'r', b'l', b'd'
+        ][..]);
+    let decoded = Name::decode(&mut data.clone()).unwrap();
+    assert_eq!(decoded, name);
 }
 ```
 
