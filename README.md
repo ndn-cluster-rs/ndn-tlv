@@ -4,7 +4,7 @@ Data that may appear as part of a TLV record should implement [`TlvEncode`] and
 [`TlvDecode`]. Types that represent a whole TLV record should implement [`Tlv`]
 in addition to [`TlvEncode`] and [`TlvDecode`]
 
-At the core of the library are the three traits [`Tlv`], `[TlvEncode`], and
+At the core of the library are the three traits [`Tlv`], [`TlvEncode`], and
 [`TlvDecode`].
 
 [`Tlv`] should be implemented on types that represent a TLV
