@@ -22,6 +22,9 @@ the TLV that this struct represents. [`Tlv`] will also be implemented on
 structs. Deriving [`TlvEncode`] and [`TlvDecode`] on structs without [`Tlv`] is
 not currently supported.
 
+Please note that this library is under active development and the API is not
+stable.
+
 ## Example
 
 Here is a quick example of how the library may be used:
