@@ -3,19 +3,19 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::{error::TlvError, Result, TlvDecode, TlvEncode};
 
 /// A variable-length number as used by TLV encoded values
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub struct VarNum {
-    value: usize,
+    value: u64,
 }
 
 impl VarNum {
-    /// Construct a new `VarNum` from a `usize`
-    pub fn new(value: usize) -> Self {
+    /// Construct a new `VarNum` from a `u64`
+    pub fn new(value: u64) -> Self {
         value.into()
     }
 
-    /// The value in this `VarNum` as a `usize`
-    pub fn value(&self) -> usize {
+    /// The value in this `VarNum` as a `u64`
+    pub fn value(&self) -> u64 {
         self.value
     }
 }
@@ -28,61 +28,121 @@ impl PartialEq for VarNum {
 
 impl From<usize> for VarNum {
     fn from(value: usize) -> Self {
-        Self { value }
+        VarNum::from(value as u64)
     }
 }
 
 impl From<u64> for VarNum {
     fn from(value: u64) -> Self {
-        VarNum::from(value as usize)
+        Self { value }
     }
 }
 
 impl From<u32> for VarNum {
     fn from(value: u32) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<u16> for VarNum {
     fn from(value: u16) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<u8> for VarNum {
     fn from(value: u8) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<isize> for VarNum {
     fn from(value: isize) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<i64> for VarNum {
     fn from(value: i64) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<i32> for VarNum {
     fn from(value: i32) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<i16> for VarNum {
     fn from(value: i16) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
     }
 }
 
 impl From<i8> for VarNum {
     fn from(value: i8) -> Self {
-        VarNum::from(value as usize)
+        VarNum::from(value as u64)
+    }
+}
+
+impl From<VarNum> for usize {
+    fn from(value: VarNum) -> Self {
+        value.value as usize
+    }
+}
+
+impl From<VarNum> for u64 {
+    fn from(value: VarNum) -> Self {
+        value.value
+    }
+}
+
+impl From<VarNum> for u32 {
+    fn from(value: VarNum) -> Self {
+        value.value as u32
+    }
+}
+
+impl From<VarNum> for u16 {
+    fn from(value: VarNum) -> Self {
+        value.value as u16
+    }
+}
+
+impl From<VarNum> for u8 {
+    fn from(value: VarNum) -> Self {
+        value.value as u8
+    }
+}
+
+impl From<VarNum> for isize {
+    fn from(value: VarNum) -> Self {
+        value.value as isize
+    }
+}
+
+impl From<VarNum> for i64 {
+    fn from(value: VarNum) -> Self {
+        value.value as i64
+    }
+}
+
+impl From<VarNum> for i32 {
+    fn from(value: VarNum) -> Self {
+        value.value as i32
+    }
+}
+
+impl From<VarNum> for i16 {
+    fn from(value: VarNum) -> Self {
+        value.value as i16
+    }
+}
+
+impl From<VarNum> for i8 {
+    fn from(value: VarNum) -> Self {
+        value.value as i8
     }
 }
 

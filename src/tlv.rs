@@ -56,14 +56,14 @@ mod tests {
     impl TlvDecode for Name {
         fn decode(mut bytes: &mut Bytes) -> Result<Self> {
             let typ = VarNum::decode(&mut bytes)?;
-            if typ.value() != Self::TYP {
+            if usize::from(typ) != Self::TYP {
                 return Err(TlvError::TypeMismatch {
                     expected: Self::TYP,
-                    found: typ.value(),
+                    found: typ.into(),
                 });
             }
             let length = VarNum::decode(&mut bytes)?;
-            let mut inner_data = bytes.copy_to_bytes(length.value());
+            let mut inner_data = bytes.copy_to_bytes(length.into());
             let components = Vec::<GenericNameComponent>::decode(&mut inner_data)?;
 
             Ok(Self { components })

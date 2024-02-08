@@ -48,21 +48,21 @@ pub fn find_tlv<T: Tlv>(bytes: &mut Bytes) -> Result<()> {
 
     while cur.has_remaining() {
         let found_typ = VarNum::decode(&mut cur)?;
-        if found_typ.value() == T::TYP {
+        if usize::from(found_typ) == T::TYP {
             return Ok(());
         }
 
         // Wrong type
-        if tlv_typ_critical(found_typ.value()) {
+        if tlv_typ_critical(found_typ.into()) {
             return Err(TlvError::TypeMismatch {
                 expected: T::TYP,
-                found: found_typ.value(),
+                found: found_typ.into(),
             });
         }
 
         // non-critical
         let length = VarNum::decode(&mut cur)?;
-        cur.advance(length.value());
+        cur.advance(length.into());
         bytes.advance(bytes.remaining() - cur.remaining());
     }
 
