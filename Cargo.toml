@@ -1,7 +1,11 @@
 [package]
 name = "ndn-tlv"
+description = "Encoding and Decoding of TLV values for Named Data Networking"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+categories = ["network-programming", "parsing"]
+keywords = ["ndn", "named", "data", "networking", "tlv"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
