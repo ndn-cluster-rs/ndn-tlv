@@ -14,4 +14,8 @@ pub enum TlvError {
     /// The data stream ended, even though more data was expected
     #[error("Unexpected end of stream")]
     UnexpectedEndOfStream,
+
+    /// A TLV record of a certain length was expected, but not found
+    #[error("TLV Record had unexpected length")]
+    UnexpectedLength,
 }

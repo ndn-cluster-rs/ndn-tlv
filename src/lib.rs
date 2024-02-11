@@ -41,9 +41,9 @@ pub trait TlvDecode: Sized {
 
 /// Advance `bytes` until a valid TLV record of type `T` is found
 ///
-/// Any unexpected critical TLV records of a different type will lead to an error.
-/// Unexpected non-critical TLV records will be ignored.
-pub fn find_tlv<T: Tlv>(bytes: &mut Bytes) -> Result<()> {
+/// In `error_on_critical` is true, any unexpected critical TLV records of a different type will lead to an error.
+/// Unexpected non-critical TLV records will always be ignored.
+pub fn find_tlv<T: Tlv>(bytes: &mut Bytes, error_on_critical: bool) -> Result<()> {
     let mut cur = bytes.clone();
 
     while cur.has_remaining() {
@@ -53,7 +53,7 @@ pub fn find_tlv<T: Tlv>(bytes: &mut Bytes) -> Result<()> {
         }
 
         // Wrong type
-        if tlv_typ_critical(found_typ.into()) {
+        if error_on_critical && tlv_typ_critical(found_typ.into()) {
             return Err(TlvError::TypeMismatch {
                 expected: T::TYP,
                 found: found_typ.into(),
@@ -347,6 +347,7 @@ impl<T: TlvDecode> TlvDecode for Option<T> {
             }) => Ok(None),
             // End of stream - no data here
             Err(TlvError::UnexpectedEndOfStream) => Ok(None),
+            Err(e) => Err(e),
         }
     }
 }
