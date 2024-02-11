@@ -39,6 +39,19 @@ pub trait TlvDecode: Sized {
     fn decode(bytes: &mut Bytes) -> Result<Self>;
 }
 
+/// A non-negative integer, not encoded using `VarNum`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum NonNegativeInteger {
+    /// An 8-bit integer
+    U8(u8),
+    /// A 16-bit integer
+    U16(u16),
+    /// A 32-bit integer
+    U32(u32),
+    /// A 64-bit integer
+    U64(u64),
+}
+
 /// Advance `bytes` until a valid TLV record of type `T` is found
 ///
 /// In `error_on_critical` is true, any unexpected critical TLV records of a different type will lead to an error.
@@ -67,6 +80,83 @@ pub fn find_tlv<T: Tlv>(bytes: &mut Bytes, error_on_critical: bool) -> Result<()
     }
 
     Err(TlvError::UnexpectedEndOfStream)
+}
+
+impl TlvEncode for NonNegativeInteger {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        match *self {
+            NonNegativeInteger::U8(n) => {
+                bytes.put_u8(n);
+            }
+            NonNegativeInteger::U16(n) => {
+                bytes.put_u16(n);
+            }
+            NonNegativeInteger::U32(n) => {
+                bytes.put_u32(n);
+            }
+            NonNegativeInteger::U64(n) => {
+                bytes.put_u64(n);
+            }
+        }
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        match *self {
+            NonNegativeInteger::U8(_) => 1,
+            NonNegativeInteger::U16(_) => 2,
+            NonNegativeInteger::U32(_) => 4,
+            NonNegativeInteger::U64(_) => 8,
+        }
+    }
+}
+
+impl TlvDecode for NonNegativeInteger {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        match bytes.remaining() {
+            1 => Ok(Self::U8(bytes.get_u8())),
+            2 => Ok(Self::U16(bytes.get_u16())),
+            4 => Ok(Self::U32(bytes.get_u32())),
+            8 => Ok(Self::U64(bytes.get_u64())),
+            _ => Err(TlvError::UnexpectedLength),
+        }
+    }
+}
+
+impl From<u8> for NonNegativeInteger {
+    fn from(value: u8) -> Self {
+        Self::U8(value)
+    }
+}
+
+impl From<u16> for NonNegativeInteger {
+    fn from(value: u16) -> Self {
+        Self::U16(value)
+    }
+}
+
+impl From<u32> for NonNegativeInteger {
+    fn from(value: u32) -> Self {
+        Self::U32(value)
+    }
+}
+
+impl From<u64> for NonNegativeInteger {
+    fn from(value: u64) -> Self {
+        Self::U64(value)
+    }
+}
+
+impl From<NonNegativeInteger> for u64 {
+    fn from(value: NonNegativeInteger) -> Self {
+        match value {
+            NonNegativeInteger::U8(n) => n as u64,
+            NonNegativeInteger::U16(n) => n as u64,
+            NonNegativeInteger::U32(n) => n as u64,
+            NonNegativeInteger::U64(n) => n,
+        }
+    }
 }
 
 impl TlvEncode for Bytes {
