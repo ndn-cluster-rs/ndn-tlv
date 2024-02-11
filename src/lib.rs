@@ -85,6 +85,191 @@ impl TlvDecode for Bytes {
     }
 }
 
+impl<const N: usize> TlvEncode for [u8; N] {
+    fn encode(&self) -> Bytes {
+        Bytes::copy_from_slice(&self[..])
+    }
+
+    fn size(&self) -> usize {
+        N
+    }
+}
+
+impl<const N: usize> TlvDecode for [u8; N] {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < N {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        let mut buf = [0; N];
+        bytes.copy_to_slice(&mut buf);
+        Ok(buf)
+    }
+}
+
+impl TlvEncode for u8 {
+    fn encode(&self) -> Bytes {
+        Bytes::copy_from_slice(&[*self][..])
+    }
+
+    fn size(&self) -> usize {
+        1
+    }
+}
+
+impl TlvDecode for u8 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 1 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_u8())
+    }
+}
+
+impl TlvEncode for i8 {
+    fn encode(&self) -> Bytes {
+        Bytes::copy_from_slice(&[*self as u8][..])
+    }
+
+    fn size(&self) -> usize {
+        1
+    }
+}
+
+impl TlvDecode for i8 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 1 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_i8())
+    }
+}
+
+impl TlvEncode for u16 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_u16(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        2
+    }
+}
+
+impl TlvDecode for u16 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 2 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_u16())
+    }
+}
+
+impl TlvEncode for i16 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_i16(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        2
+    }
+}
+
+impl TlvDecode for i16 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 2 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_i16())
+    }
+}
+
+impl TlvEncode for u32 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_u32(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        4
+    }
+}
+
+impl TlvDecode for u32 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 4 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_u32())
+    }
+}
+
+impl TlvEncode for i32 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_i32(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        4
+    }
+}
+
+impl TlvDecode for i32 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 4 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_i32())
+    }
+}
+
+impl TlvEncode for u64 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_u64(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        8
+    }
+}
+
+impl TlvDecode for u64 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 8 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_u64())
+    }
+}
+
+impl TlvEncode for i64 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_i64(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        8
+    }
+}
+
+impl TlvDecode for i64 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 8 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_i64())
+    }
+}
+
 impl<T: TlvEncode> TlvEncode for Vec<T> {
     fn encode(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(self.size());
