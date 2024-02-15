@@ -1,3 +1,9 @@
+use std::io::Read;
+
+use bytes::{BufMut, Bytes, BytesMut};
+
+use crate::{TlvDecode, TlvEncode, TlvError, VarNum};
+
 /// A TLV record
 pub trait Tlv {
     /// The assigned type number for this TLV record
@@ -12,6 +18,43 @@ pub trait Tlv {
     /// Whether the TLV is critical, see [`tlv_critical`]
     fn critical() -> bool {
         tlv_critical::<Self>()
+    }
+
+    /// Read a TLV from a type implementing `Read`
+    fn from_reader(mut reader: impl Read) -> Result<Self, TlvError>
+    where
+        Self: TlvDecode,
+    {
+        let mut header_buf = [0; 18];
+        let bytes_read = reader.read(&mut header_buf).map_err(TlvError::IOError)?;
+        let mut header_bytes = Bytes::copy_from_slice(&header_buf);
+
+        let typ = VarNum::decode(&mut header_bytes)?;
+        if typ.value() as usize != Self::TYP {
+            // Technically not necessary, but we can exit early here
+            return Err(TlvError::TypeMismatch {
+                expected: Self::TYP,
+                found: typ.value() as usize,
+            });
+        }
+
+        let len = VarNum::decode(&mut header_bytes)?;
+        let total_len = typ.size() + len.size() + len.value() as usize;
+
+        let mut bytes = BytesMut::with_capacity(total_len);
+        bytes.put(&header_buf[0..bytes_read]);
+
+        let mut left_to_read = total_len - bytes_read;
+        let mut buf = [0; 1024];
+        while left_to_read > 0 {
+            let bytes_read = reader
+                .read(&mut buf[0..left_to_read])
+                .map_err(TlvError::IOError)?;
+            bytes.put(&buf[..left_to_read]);
+            left_to_read -= bytes_read;
+        }
+
+        Self::decode(&mut bytes.freeze())
     }
 }
 
