@@ -487,6 +487,12 @@ mod tests {
         CanBePrefix(CanBePrefix),
     }
 
+    #[derive(Debug, Tlv)]
+    #[tlv(130, internal = true)]
+    struct HasGeneric<T> {
+        data: T,
+    }
+
     #[test]
     fn generic_name_component() {
         let mut data = Bytes::from(&[8, 5, b'h', b'e', b'l', b'l', b'o', 255, 255, 255][..]);
@@ -613,5 +619,13 @@ mod tests {
         let name = Name::decode(&mut data);
         assert!(name.is_err());
         assert_eq!(name.unwrap_err(), TlvError::UnexpectedEndOfStream);
+    }
+
+    #[test]
+    fn generic() {
+        let mut data = Bytes::from(&[130, 3, 1, 2, 3][..]);
+
+        let decoded = <HasGeneric<Bytes>>::decode(&mut data).unwrap();
+        assert_eq!(decoded.data, &[1, 2, 3][..]);
     }
 }
