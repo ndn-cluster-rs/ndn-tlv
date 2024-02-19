@@ -159,6 +159,28 @@ impl From<NonNegativeInteger> for u64 {
     }
 }
 
+impl NonNegativeInteger {
+    /// Create a `NonNegativeInteger` using the smallest possible representation to fit the given
+    /// value
+    pub fn smallest_repr(value: u64) -> Self {
+        if value <= 0xFF {
+            NonNegativeInteger::U8(value as u8)
+        } else if value <= 0xFFFF {
+            NonNegativeInteger::U16(value as u16)
+        } else if value <= 0xFFFF_FFFF {
+            NonNegativeInteger::U32(value as u32)
+        } else {
+            NonNegativeInteger::U64(value as u64)
+        }
+    }
+}
+
+impl std::fmt::Display for NonNegativeInteger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        u64::from(*self).fmt(f)
+    }
+}
+
 impl TlvEncode for Bytes {
     fn encode(&self) -> Bytes {
         self.clone()
