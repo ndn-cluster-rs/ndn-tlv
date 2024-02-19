@@ -464,6 +464,22 @@ impl<T: TlvDecode> TlvDecode for Option<T> {
     }
 }
 
+impl TlvEncode for () {
+    fn encode(&self) -> Bytes {
+        Bytes::new()
+    }
+
+    fn size(&self) -> usize {
+        0
+    }
+}
+
+impl TlvDecode for () {
+    fn decode(_: &mut Bytes) -> Result<Self> {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
