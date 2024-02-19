@@ -1,9 +1,10 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use derive_more::{AsMut, AsRef, Display};
 
 use crate::{error::TlvError, Result, TlvDecode, TlvEncode};
 
 /// A variable-length number as used by TLV encoded values
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Display, AsRef, AsMut)]
 pub struct VarNum {
     value: u64,
 }
@@ -17,12 +18,6 @@ impl VarNum {
     /// The value in this `VarNum` as a `u64`
     pub fn value(&self) -> u64 {
         self.value
-    }
-}
-
-impl PartialEq for VarNum {
-    fn eq(&self, other: &Self) -> bool {
-        self.value() == other.value()
     }
 }
 

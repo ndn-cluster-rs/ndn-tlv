@@ -13,3 +13,4 @@ keywords = ["ndn", "named", "data", "networking", "tlv"]
 bytes = "1.5.0"
 thiserror = "1.0.56"
 ndn-tlv-derive = { version = "0.1.0", path = "../ndn-tlv-derive" }
+derive_more = "0.99.17"

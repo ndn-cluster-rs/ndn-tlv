@@ -40,7 +40,7 @@ pub trait TlvDecode: Sized {
 }
 
 /// A non-negative integer, not encoded using `VarNum`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NonNegativeInteger {
     /// An 8-bit integer
     U8(u8),
@@ -50,6 +50,12 @@ pub enum NonNegativeInteger {
     U32(u32),
     /// A 64-bit integer
     U64(u64),
+}
+
+impl Default for NonNegativeInteger {
+    fn default() -> Self {
+        NonNegativeInteger::U8(0)
+    }
 }
 
 /// Advance `bytes` until a valid TLV record of type `T` is found
@@ -126,25 +132,31 @@ impl TlvDecode for NonNegativeInteger {
 
 impl From<u8> for NonNegativeInteger {
     fn from(value: u8) -> Self {
-        Self::U8(value)
+        Self::new(value as u64)
     }
 }
 
 impl From<u16> for NonNegativeInteger {
     fn from(value: u16) -> Self {
-        Self::U16(value)
+        Self::new(value as u64)
     }
 }
 
 impl From<u32> for NonNegativeInteger {
     fn from(value: u32) -> Self {
-        Self::U32(value)
+        Self::new(value as u64)
     }
 }
 
 impl From<u64> for NonNegativeInteger {
     fn from(value: u64) -> Self {
-        Self::U64(value)
+        Self::new(value as u64)
+    }
+}
+
+impl From<usize> for NonNegativeInteger {
+    fn from(value: usize) -> Self {
+        Self::new(value as u64)
     }
 }
 
@@ -162,7 +174,7 @@ impl From<NonNegativeInteger> for u64 {
 impl NonNegativeInteger {
     /// Create a `NonNegativeInteger` using the smallest possible representation to fit the given
     /// value
-    pub fn smallest_repr(value: u64) -> Self {
+    pub const fn new(value: u64) -> Self {
         if value <= 0xFF {
             NonNegativeInteger::U8(value as u8)
         } else if value <= 0xFFFF {
