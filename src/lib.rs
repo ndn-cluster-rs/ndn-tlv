@@ -474,7 +474,7 @@ mod tests {
         pub(crate) name: Bytes,
     }
 
-    #[derive(Debug, Tlv)]
+    #[derive(Debug, Tlv, PartialEq)]
     #[tlv(7, internal = true)]
     struct Name {
         components: Vec<GenericNameComponent>,
@@ -513,6 +513,13 @@ mod tests {
     #[tlv(130, internal = true)]
     struct HasGeneric<T> {
         data: T,
+    }
+
+    #[derive(Debug, Tlv)]
+    #[tlv(0, internal = true)]
+    struct Sequence {
+        name1: Name,
+        name2: Name,
     }
 
     #[test]
@@ -649,5 +656,38 @@ mod tests {
 
         let decoded = <HasGeneric<Bytes>>::decode(&mut data).unwrap();
         assert_eq!(decoded.data, &[1, 2, 3][..]);
+    }
+
+    #[test]
+    fn sequence() {
+        let mut data = Bytes::from(
+            &[
+                7, 11, 8, 5, b'h', b'e', b'l', b'l', b'o', 8, 2, b'a', b'b', 7, 5, 8, 3, b'a',
+                b's', b'd',
+            ][..],
+        );
+
+        let sequence = Sequence::decode(&mut data).unwrap();
+        assert_eq!(
+            sequence.name1,
+            Name {
+                components: vec![
+                    GenericNameComponent {
+                        name: Bytes::from_static(b"hello")
+                    },
+                    GenericNameComponent {
+                        name: Bytes::from_static(b"ab")
+                    },
+                ]
+            }
+        );
+        assert_eq!(
+            sequence.name2,
+            Name {
+                components: vec![GenericNameComponent {
+                    name: Bytes::from_static(b"asd")
+                },]
+            }
+        );
     }
 }
