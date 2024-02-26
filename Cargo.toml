@@ -1,7 +1,7 @@
 [package]
 name = "ndn-tlv"
 description = "Encoding and Decoding of TLV values for Named Data Networking"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 categories = ["network-programming", "parsing"]
@@ -12,5 +12,5 @@ keywords = ["ndn", "named", "data", "networking", "tlv"]
 [dependencies]
 bytes = "1.5.0"
 thiserror = "1.0.56"
-ndn-tlv-derive = { version = "0.1.0", path = "../ndn-tlv-derive" }
+ndn-tlv-derive = { version = "0.3.0", path = "../ndn-tlv-derive" }
 derive_more = "0.99.17"
