@@ -185,6 +185,26 @@ impl NonNegativeInteger {
             NonNegativeInteger::U64(value as u64)
         }
     }
+
+    /// Return the value of this `NonNegativeInteger` as u64
+    pub const fn as_u64(&self) -> u64 {
+        match *self {
+            NonNegativeInteger::U8(value) => value as u64,
+            NonNegativeInteger::U16(value) => value as u64,
+            NonNegativeInteger::U32(value) => value as u64,
+            NonNegativeInteger::U64(value) => value as u64,
+        }
+    }
+
+    /// Return the value of this `NonNegativeInteger` as usize
+    pub const fn as_usize(&self) -> usize {
+        match *self {
+            NonNegativeInteger::U8(value) => value as usize,
+            NonNegativeInteger::U16(value) => value as usize,
+            NonNegativeInteger::U32(value) => value as usize,
+            NonNegativeInteger::U64(value) => value as usize,
+        }
+    }
 }
 
 impl std::fmt::Display for NonNegativeInteger {
