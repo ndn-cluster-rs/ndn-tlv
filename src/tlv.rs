@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 use crate::{TlvDecode, TlvEncode, TlvError, VarNum};
 
@@ -72,6 +72,58 @@ pub const fn tlv_critical<T: Tlv + ?Sized>() -> bool {
 /// lead to an error
 pub const fn tlv_typ_critical(typ: usize) -> bool {
     typ < 32 || typ & 1 == 1
+}
+
+/// A generic TLV record whose type is only known at runtime
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct GenericTlv<T> {
+    pub typ: VarNum,
+    pub len: VarNum,
+    pub content: T,
+}
+
+impl<T> TlvDecode for GenericTlv<T>
+where
+    T: TlvDecode,
+{
+    fn decode(bytes: &mut Bytes) -> crate::Result<Self> {
+        let typ = VarNum::decode(bytes)?.into();
+        let len = VarNum::decode(bytes)?;
+
+        if bytes.remaining() < len.into() {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+
+        let mut inner_data = bytes.split_to(len.into());
+        Ok(Self {
+            typ,
+            len,
+            content: T::decode(&mut inner_data)?,
+        })
+    }
+}
+
+impl<T> TlvEncode for GenericTlv<T>
+where
+    T: TlvEncode,
+{
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put(self.typ.encode());
+        bytes.put(self.len.encode());
+
+        let mut content = self.content.encode();
+        content.truncate(self.len.into());
+        if content.len() != self.len.into() {
+            panic!("GenericTLV length longer than encoded content");
+        }
+        bytes.put(content);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        self.typ.size() + self.len.size() + self.content.size()
+    }
 }
 
 #[cfg(test)]

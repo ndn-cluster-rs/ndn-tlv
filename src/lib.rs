@@ -5,8 +5,7 @@ pub use ::bytes;
 pub use ::ndn_tlv_derive::Tlv;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub use error::TlvError;
-pub use tlv::Tlv;
-pub use tlv::{tlv_critical, tlv_typ_critical};
+pub use tlv::{tlv_critical, tlv_typ_critical, GenericTlv, Tlv};
 pub use varnum::VarNum;
 
 mod error;
