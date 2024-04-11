@@ -413,6 +413,48 @@ impl TlvDecode for i64 {
     }
 }
 
+impl TlvEncode for u128 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_u128(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        16
+    }
+}
+
+impl TlvDecode for u128 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 16 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_u128())
+    }
+}
+
+impl TlvEncode for i128 {
+    fn encode(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.size());
+        bytes.put_i128(*self);
+        bytes.freeze()
+    }
+
+    fn size(&self) -> usize {
+        16
+    }
+}
+
+impl TlvDecode for i128 {
+    fn decode(bytes: &mut Bytes) -> Result<Self> {
+        if bytes.remaining() < 16 {
+            return Err(TlvError::UnexpectedEndOfStream);
+        }
+        Ok(bytes.get_i128())
+    }
+}
+
 impl<T: TlvEncode> TlvEncode for Vec<T> {
     fn encode(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(self.size());
