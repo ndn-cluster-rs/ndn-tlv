@@ -19,6 +19,10 @@ pub enum TlvError {
     #[error("TLV Record had unexpected length")]
     UnexpectedLength,
 
+    /// Data being read was not in the expected format
+    #[error("Data had unexpected format")]
+    FormatError,
+
     /// An error during an IO operation
     #[error("IO Error")]
     IOError(std::io::Error),
