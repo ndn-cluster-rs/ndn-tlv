@@ -77,8 +77,11 @@ pub const fn tlv_typ_critical(typ: usize) -> bool {
 /// A generic TLV record whose type is only known at runtime
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GenericTlv<T> {
+    /// TLV-TYPE
     pub typ: VarNum,
+    /// TLV-LENGTH
     pub len: VarNum,
+    /// Actual content of the TLV record
     pub content: T,
 }
 
