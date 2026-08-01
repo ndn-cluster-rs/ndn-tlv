@@ -1,29 +1,32 @@
-Provides abstractions for working with [TLV-encoded data]
+# ndn-tlv
 
-Data that may appear as part of a TLV record should implement [`TlvEncode`] and
-[`TlvDecode`]. Types that represent a whole TLV record should implement [`Tlv`]
-in addition to [`TlvEncode`] and [`TlvDecode`]
+[![docs.rs](https://img.shields.io/docsrs/ndn-tlv)](https://docs.rs/ndn-tlv)
+[![crates.io](https://img.shields.io/crates/v/ndn-tlv)](https://crates.io/crates/ndn-tlv)
+[![license](https://img.shields.io/crates/l/ndn-tlv)](https://github.com/ndn-cluster-rs/ndn-tlv/blob/master/LICENSE)
 
-At the core of the library are the three traits [`Tlv`], [`TlvEncode`], and
-[`TlvDecode`].
+Provides abstractions for working with [TLV-encoded data].
 
-[`Tlv`] should be implemented on types that represent a TLV
-record. In other words, types that, in their encoded form, start with a type
-and a length.
+It defines the core traits for encoding, decoding, and representing TLV
+records, so higher-level NDN crates can (de)serialize their packet types
+without hand-rolling the wire format themselves.
 
-[`TlvEncode`] and [`TlvDecode`] are used for types that can be encoded/decoded
-and may appear in TLV records. All types implementing [`Tlv`] should also
-implement [`TlvEncode`] and [`TlvDecode`].
+## Installation
 
-To ease implementing these traits, a derive macro `Tlv` is made available.
-Simply derive it on an enum to automatically implement [`TlvEncode`] and
-[`TlvDecode`]. On structs, an attribute must be present to set the type ID of
-the TLV that this struct represents. [`Tlv`] will also be implemented on
-structs. Deriving [`TlvEncode`] and [`TlvDecode`] on structs without [`Tlv`] is
-not currently supported.
+```
+cargo add ndn-tlv
+```
 
-Please note that this library is under active development and the API is not
-stable.
+## How it works
+
+- [`Tlv`] should be implemented on types that represent a whole TLV record --
+  ones that, in their encoded form, start with a type and a length.
+- [`TlvEncode`] and [`TlvDecode`] are implemented on any type that can be
+  encoded/decoded as part of a TLV record's value, including all types that
+  implement [`Tlv`].
+- A `Tlv` derive macro (from
+  [`ndn-tlv-derive`](https://crates.io/crates/ndn-tlv-derive)) implements all
+  three traits for you, so you rarely have to write them by hand. See
+  [its documentation](derive@Tlv) for how to use it.
 
 ## Example
 
@@ -80,3 +83,21 @@ fn main() {
 ```
 
 [TLV-encoded data]: https://docs.named-data.net/NDN-packet-spec/current/tlv.html
+
+## Related crates
+
+- [`ndn-app`](https://crates.io/crates/ndn-app) is an application framework for building NDN producers and consumers, built on top of `ndn-protocol`, `ndn-ndnlp`, and `ndn-nfd-mgmt`.
+- [`ndn-tlv-derive`](https://crates.io/crates/ndn-tlv-derive) provides the derive macros `ndn-tlv` uses to generate TLV encoding/decoding for structs and enums.
+- [`ndn-protocol`](https://crates.io/crates/ndn-protocol) implements the core NDN packet types (Interest, Data, Names, signatures) on top of `ndn-tlv`.
+- [`ndn-ndnlp`](https://crates.io/crates/ndn-ndnlp) implements NDNLPv2, the link-layer protocol used to send NDN packets over a transport.
+- [`ndn-nfd-mgmt`](https://crates.io/crates/ndn-nfd-mgmt) implements the NFD management protocol, used e.g. to register routes with a local forwarder.
+
+`ndn-tlv` is the base layer of the stack -- every other crate here builds on it.
+
+## License
+
+MIT
+
+---
+
+Produced as part of a Master's thesis in Computer Science.
